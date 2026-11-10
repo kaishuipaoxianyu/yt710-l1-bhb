@@ -1,0 +1,21 @@
+# build artifacts
+*.o
+main.o
+main_thr*.o
+snippet.o
+
+# run outputs
+raw.csv
+raw_existence_mode.csv
+cross_main.csv
+cross_calib.csv
+cross_results.csv
+summary.json
+summary_table.tsv
+runs.tsv
+env.json
+env_raw.txt
+
+# misc
+*.log
+__pycache__/

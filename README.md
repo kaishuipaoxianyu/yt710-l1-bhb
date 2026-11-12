@@ -134,6 +134,10 @@ SHARE=1 TRAIN=128 ITER=50 taskset -c 2 ./main_thr4.o
 - **深度未裁决**：待跑 calib.c 复核。
 - 判定 `status=success`，`failure_mode=null`。
 
+## 交叉验证参考（crossref/）
+
+组内成员 **ZYW** 用另一套独立仪器 `bhb_final.c`（单一仪器版）复现了同一原语，与本仓结论逐档吻合（两平台最优点交集 = H=256）。其交付包原样收录在 [`crossref/zyw-bhb_final/`](crossref/zyw-bhb_final/)，**作者为 ZYW，仅作交叉验证参考，非本仓原创**（见 [`crossref/README.md`](crossref/README.md)）。ZYW 标定的 N2 参数：`HISTORY_SIZE=256`、`--train-n=32`、`THR=4`。
+
 ## 引用与许可
 
 - 原语本体来自 [`vusec/bhi-spectre-bhb`](https://github.com/vusec/bhi-spectre-bhb) `@ ae_final`，遵循其原始许可；本仓库仅对其做 N2（Yitian 710）移植与测量脚手架，`snippet.S`/gadget/JIT/触发时序未改。

@@ -22,4 +22,4 @@
 - `src/helper.h`：确认计时分支已是 `isb; mrs cntvct_el0`（补丁1）。
 
 ## 已原样齐全（无需导出）
-`src/snippet.S`、`src/main.c`、`src/calib.c`、`src/targets.h`、helper.h 计时补丁(`patches/PATCH.md`)、全部 `scripts/analyze_*.py` 与 `sweep_*.sh`/`calib_thr.sh`/`make_env.sh`、`docs/reports/L1-1_结论卡_v2.2.md`、`docs/environment.md`、聚合数据 `data/cross_aggregated.tsv`。
+`src/snippet.S`、`src/main.c`、`src/calib.c`、`src/targets.h`、helper.h 计时补丁(`patches/PATCH.md`)、全部 `scripts/analyze_*.py` 与 `sweep_*.sh`/`calib_thr.sh`/`make_env.sh`、`reports/L1-1_结论卡_v2.2.md`、`../docs/environment.md`、聚合数据 `data/cross_aggregated.tsv`。

@@ -11,7 +11,7 @@
 |---|---|---|---|
 | **L1-1** | [`L1-1-spectre-bhb/`](L1-1-spectre-bhb/) | Spectre-BHB 同进程原语（BHB 带偏间接分支 + L1D Flush+Reload） | ✅ 存在性 **success**；BHB 深度待 calib 裁决 |
 | **L1-2** | [`L1-2-bhb-n2redesign/`](L1-2-bhb-n2redesign/) | BHB 原理代码与 N2 重设计 | 设计报告 |
-| **L1-3** | [`L1-3-mdu/`](L1-3-mdu/) | MDU 可测量性与跨进程可观测性 | ✅ **定案**：可测 + 可跨进程（~74 kbps 隐蔽信道） |
+| **L1-3** | [`L1-3-mdu/`](L1-3-mdu/) | MDU 可测量性与跨进程可观测性 | ✅ **定案**：可测（四核一致）+ 可跨进程（K=8 → 3.12% @ 78.9 kbps） |
 
 ## 其它
 

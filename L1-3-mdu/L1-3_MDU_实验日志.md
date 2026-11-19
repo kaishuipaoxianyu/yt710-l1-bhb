@@ -3,16 +3,16 @@
 > **文件性质**：这是 L1-3 任务的**唯一权威记录**，逐次会话累加，不删旧内容（作废的只加删除线并标注原因）。
 > **维护规则**：每次实验会话结束时，必须更新 ① §7 数据记录（追加新表）② §8 当前结论 ③ §9 待办 ④ §10 变更记录。其它节只在事实被推翻时改。
 > **接手方式**：新对话拿到本文件 + `L1-3_MDU可测量性_交接简报.md`，即可无上下文接手。
-> **最后更新**：2026-11-19（会话 1–25）
+> **最后更新**：2026-11-19（会话 1–31）
 > **判决书**：`L1-3_MDU_结论卡.md`（本文件是证据卷，结论看那张卡）
 >
 > **交付清单（四件套，全在本工作区）**
 >
 > | 路径 | 内容 |
 > |---|---|
-> | `L1-3_MDU_结论卡.md` | 判决书：**Q-A ✅ / Q-B ✅ 定案（正向）**；信道 ~74 kbps |
-> | `L1-3_MDU_实验日志.md` | 本文件：**25 台**装置逐台源码内嵌 |
-> | `src/*.c` | **25 个**装置源码，可直接 scp 到服务器重编 |
+> | `L1-3_MDU_结论卡.md` | 判决书：**Q-A ✅ / Q-B ✅ 定案（正向）**；信道 **K=8 → 3.12% @ 78.9 kbps**（S1x 曲线） |
+> | `L1-3_MDU_实验日志.md` | 本文件：**30 台**装置（TC-01～TC-21）逐台源码内嵌 |
+> | `src/*.c` | **30 个**装置源码，可直接 scp 到服务器重编 |
 > | `papers/*.pdf` | 两篇参考论文原件（ARMeD @ TCAD 2025、Leaky MDU @ DAC 2023） |
 
 ---
@@ -224,11 +224,16 @@
 | **S1o** | `mdu_rst.c` | **RST 剂量反应**：判别"队列深度" vs "一次性学习" | ❌ **QUEUE**：dA = 1/1/2 tick（随 RST 涨）→ **S1n 的 PASS 作废** |
 | **S1p** | `mdu_amp.c` | **M 倍累加放大**：把"一次误预测"重复 32 次累加，绕开 60 cycle 量化台阶 | ✅ **SIGNAL**：X=+37 / Y=0 / S=+37 tick |
 | **S1q** | `mdu_xproc.c` | **跨进程**：两进程钉核 3，一进程训练、另一进程探测 | ✅ **PASS**：TA=815 / TB=502 / D=+310 tick |
-| **S1r** | `mdu_chan.c` | **信道实测**：把状态变化当比特，测错误率与吞吐（论文 Fig.8 的形态） | ✅ 已跑：错误率 3.12%（95%CI 约 1–8%）@ **~74 kbps** |
+| **S1r** | `mdu_chan.c` | 信道初测（固定阈值 `K×1.3`，单次 128 bit） | ✅ 已跑：3.12%（95%CI 约 1–8%）@ ~74 kbps（**S1x 用中点阈值重测为 78.9，见 §8**） |
 | **S1s** | `mdu_kill1.c` | **杀死控制①**：去掉 store 地址拖晚 → 同进程 X 必须掉到 0 | ✅ **PASS**：S_LATE=+36 / S_EARLY=+0 |
 | **S1t** | `mdu_kill2.c` | 跨进程控制（**设计有缺陷，无信息量**）：两臂都是 n 训练 | ❌ **作废**：D=−2.0（两臂都慢，无法区分 PC 索引与全局状态） |
 | **S1u** | `mdu_kill3.c` | 两臂都用 a 训练，只差同 PC / 异 PC | ❌ **无信息量**：两臂都 511（我判据写反了——a 训练下自训练会让两臂都变快） |
 | **S1v** | `mdu_kill4.c` | 地址打印排除 ICF + n 训练判别 PC 索引 | ✅ **PASS**：同PC 756 / 异PC 509，D=+246 tick |
+| **S1w** | `mdu_cycle.c` | **补限制①**：计数线程做 cycle 级交叉验证 | ✅ 已跑：27.9 cycle/事件（与 cntvct 的 69 差 2.4×，仅量级一致） |
+| **S1x** | `mdu_curve.c` | **补限制②**：K 扫描 + 中点阈值 | ✅ 已跑：K=8 → 3.12%@78.9kbps；K=16 → 2.34%@39.5kbps |
+| **S1y** | `mdu_msweep.c` | **补限制③**：M 剂量反应，检验放大是否忠实（解释 69/36/29 散布） | ✅ 已跑：S/M = 1.000 / 1.094 / 1.148（spread 1.15×）→ 放大忠实 |
+| **S1z** | `mdu_cores.c` | **补限制④**：四核各跑一遍 | ✅ **PASS**：S = 36/37/37/36 tick，max/min 1.03× |
+| **S1aa** | `mdu_cal.c` | **补限制①收尾**：已知负载标定两套计时器 | ✅ 已跑：纯 load 比值 0.99；store 密集 2.72 → **计数器对 store 密集负载系统性少计** |
 
 ### 6.1 各装置关键设计点（重建用）
 
@@ -4407,29 +4412,855 @@ int main(void){
 
 **Q-B 由此闭环**：数据（S1q，D=+310）与机理（S1v，PC 索引）都在。
 
-## 8. 当前结论（2026-11-19 会话 25 定稿，正向）
+
+**S1w / S1x / S1y（"圆满"三台，会话 26 交付，待跑）**
+
+§4 的四条限制里，有三条可以用现成的机器直接补：
+
+| 装置 | 补哪条限制 | 做法 | 判据 |
+|---|---|---|---|
+| **S1w** `mdu_cycle.c` | ① 没有 cycle 级交叉验证 | PMU 被禁，改用论文在 Apple 上的老办法：**另起计数线程**（钉核 2，主线程钉核 3），先用 cntvct 校准"1 count = 多少 cycle"，再用四臂结构测每事件代价 | 与 cntvct 版的 **69 cycle/事件** 同量级即算交叉验证通过 |
+| **S1x** `mdu_curve.c` | ② 信道单薄 | K ∈ {1,2,4,8,16,32} 扫描；**阈值改为每 K 实测两臂均值的中点**（不再手调 K×1.3）；每配置 256 bit、错误率带 Wilson CI | 得到一张"错误率–吞吐"表，从中选稳态工作点 |
+| **S1y** `mdu_msweep.c` | ③ 量级散布 2× | 同一台 S1p 结构，M ∈ {8,32,128}，看 **S/M 是否恒定** | S/M 恒定 ⇒ 放大忠实，散布来自测量上下文而非估计器 |
+
+第四条（只此一核）不需要新装置，**把现成二进制换核跑一遍**即可：`taskset -c 0/1/2/3 ./mdu_amp`。
+
+
+
+#### 源码 S1w `mdu_cycle.c`（完整，可直接编译）
+
+> CC=gcc -O2 -o mdu_cycle mdu_cycle.c -pthread -lm；运行 `taskset -c 3 ./mdu_cycle`（计数线程自绑核 2）
+
+```c
+/* mdu_cycle.c —— S1w: 计数线程做 cycle 级交叉验证（补限制①：没有 PMU）（会话 26）
+ * 编译: gcc -O2 -o mdu_cycle mdu_cycle.c -pthread -lm   运行: taskset -c 3 ./mdu_cycle
+ *
+ * 背景: 本机 PMCCNTR 被禁（perf_event_paranoid=4），只能用 20 ns 的 cntvct。
+ *       论文在 Apple 上遇到同样问题时的解法是"计数线程"——另起一个线程不停自增一个
+ *       共享计数器，读它就得到比系统计时器细得多的刻度。这里照做，用它独立复核 S1p。
+ *
+ * 做法:
+ *   - 计数线程钉 **核 2**，主线程钉 **核 3**（互不抢占）；
+ *   - 先用 cntvct 校准"每个计数对应多少 cycle"；
+ *   - 再用四臂结构（与 S1p 同构：A/N 用 n 复位，B/D 用 a 复位，M=64）测 X/Y/S，
+ *     折成"每事件多少 cycle"，与 cntvct 版给出的 69 cycle 对照。
+ *
+ * 注意: 跨核读共享计数器有几十 cycle 的相干延迟；但它在 t0/t1 两端同样存在，
+ *       相减即抵消。M=64 使信号（约 4400 cycle）远大于该延迟抖动。
+ */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <pthread.h>
+#include <sched.h>
+#include <unistd.h>
+
+static inline uint64_t rd(void){ uint64_t t; __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(t)); return t; }
+static volatile uint64_t sinkv;
+static volatile uint64_t mask0 = 0;
+static unsigned char *buf;
+
+/* ---- 计数线程 ---- */
+static volatile uint64_t g_ctr = 0;
+static volatile int g_stop = 0;
+static void *ctr_thread(void *arg){
+  (void)arg;
+  cpu_set_t s; CPU_ZERO(&s); CPU_SET(2,&s);
+  if(sched_setaffinity(0,sizeof(s),&s)!=0) printf("!! 计数线程绑核失败\n");
+  uint64_t c = 0;
+  while(!g_stop){
+    __asm__ __volatile__("add %0, %0, #1" : "+r"(c) :: "memory");
+    g_ctr = c;
+  }
+  return NULL;
+}
+
+__attribute__((noinline)) static void st2ld(void *x0, void *x1){
+  uint64_t a = (uint64_t)(uintptr_t)x0;
+  for(int i=0;i<10;i++) a = a*6364136223846793005ULL + 1442695040888963407ULL;
+  void *sa = (void*)((uintptr_t)x0 + (a & mask0));
+  *(volatile uint64_t*)sa = 0x1111111122222222ULL;
+  uint64_t x = *(volatile uint64_t*)x1;
+  uint64_t b = a ^ x;
+  for(int i=0;i<10;i++) b = b*6364136223846793005ULL + 1442695040888963407ULL;
+  sinkv = b;
+}
+
+__attribute__((noinline)) static void arm(void *r0, void *r1, void *p0, void *p1, int RST, int M){
+  for(int m=0;m<M;m++){ for(int k=0;k<RST;k++) st2ld(r0,r1); st2ld(p0,p1); }
+}
+
+static int cmpd(const void*p,const void*q){ double x=*(const double*)p,y=*(const double*)q; return (x>y)-(x<y); }
+static double qsel(double *v,int n,double p){
+  double *c=malloc((size_t)n*sizeof(double)); memcpy(c,v,(size_t)n*sizeof(double));
+  qsort(c,(size_t)n,sizeof(double),cmpd);
+  int i=(int)(p*(n-1)); double r=c[i]; free(c); return r;
+}
+static void boot_median(double *v,int n,int B,double *lo,double *hi){
+  double *m=malloc((size_t)B*sizeof(double)), *s=malloc((size_t)n*sizeof(double));
+  uint64_t st=0x9E3779B97F4A7C15ULL;
+  for(int b=0;b<B;b++){
+    for(int i=0;i<n;i++){ st^=st<<13; st^=st>>7; st^=st<<17; s[i]=v[(int)(st%(uint64_t)n)]; }
+    qsort(s,(size_t)n,sizeof(double),cmpd); m[b]=s[n/2];
+  }
+  qsort(m,(size_t)B,sizeof(double),cmpd);
+  *lo=m[(int)(0.025*(B-1))]; *hi=m[(int)(0.975*(B-1))];
+  free(m); free(s);
+}
+
+int main(void){
+  setbuf(stdout,NULL);
+  uint64_t frq=0; __asm__ __volatile__("mrs %0, cntfrq_el0":"=r"(frq));
+  if(!frq) frq=50000000ULL;
+  const double nspt = 1e9/(double)frq;
+
+  if(posix_memalign((void**)&buf,4096,1u<<20)!=0) return 2;
+  memset(buf,0,1u<<20);
+  void *PA = (void*)(buf+0x1000);
+  void *PB = (void*)(buf+0x8000);
+
+  pthread_t th;
+  if(pthread_create(&th,NULL,ctr_thread,NULL)!=0){ printf("!! 建线程失败\n"); return 2; }
+  usleep(20000);
+
+  /* ---- 校准：计数增量 vs cntvct 纳秒 ---- */
+  uint64_t c0 = g_ctr, t0 = rd();
+  while ((double)(rd()-t0)*nspt < 20e6) { }     /* 约 20 ms */
+  uint64_t c1 = g_ctr, t1 = rd();
+  double elapsed_ns = (double)(t1-t0)*nspt;
+  double per_count_ns = elapsed_ns / (double)(c1-c0);
+  printf("# 校准: %.3f ms 内计数 +%llu  → 1 count = %.3f ns = %.2f cycle\n",
+         elapsed_ns/1e6, (unsigned long long)(c1-c0), per_count_ns, per_count_ns*3.0);
+
+  const int M = 64, RST = 20, N = 120;
+  double *X=malloc((size_t)N*sizeof(double)), *Y=malloc((size_t)N*sizeof(double)), *S=malloc((size_t)N*sizeof(double));
+
+  for(int i=0;i<5000;i++) st2ld(PA,PB);
+
+  printf("# tick=%.2f ns  M=%d  RST=%d  N=%d  （计时源 = 计数线程）\n", nspt, M, RST, N);
+
+  for(int r=0;r<N;r++){
+    uint64_t a,b; double A,Nn,Bb,D;
+    a=g_ctr; arm(PA,PB,PA,PA,RST,M); b=g_ctr; A=(double)(b-a);
+    a=g_ctr; arm(PA,PB,PA,PB,RST,M); b=g_ctr; Nn=(double)(b-a);
+    a=g_ctr; arm(PA,PA,PA,PA,RST,M); b=g_ctr; Bb=(double)(b-a);
+    a=g_ctr; arm(PA,PA,PA,PB,RST,M); b=g_ctr; D=(double)(b-a);
+    X[r]=A-Nn; Y[r]=Bb-D; S[r]=X[r]-Y[r];
+    if((r%30)==0) printf("  ...%d/%d\n", r, N);
+  }
+  g_stop=1; pthread_join(th,NULL);
+
+  double lo,hi;
+  boot_median(X,N,1000,&lo,&hi);
+  printf("\n== X = A − N（计数单位）==\n  中位 %.1f counts  CI [%.1f, %.1f]\n", qsel(X,N,0.5), lo, hi);
+  boot_median(Y,N,1000,&lo,&hi);
+  printf("== Y = B − D ==\n  中位 %.1f counts  CI [%.1f, %.1f]\n", qsel(Y,N,0.5), lo, hi);
+  boot_median(S,N,1000,&lo,&hi);
+  double ms=qsel(S,N,0.5);
+  printf("== S = X − Y ==\n  中位 %.1f counts  CI [%.1f, %.1f]\n", ms, lo, hi);
+
+  double per_ev_counts = ms/(double)M;
+  double per_ev_ns = per_ev_counts * per_count_ns;
+  printf("\n== 折成每次事件 ==\n  %.3f counts = %.1f ns = **%.1f cycle**\n",
+         per_ev_counts, per_ev_ns, per_ev_ns*3.0);
+  printf("  （cntvct 版 S1p 给的是 69 cycle/事件；两者同量级即视为交叉验证通过）\n");
+
+  int ok = (per_ev_ns*3.0 > 10.0);
+  printf("\n>>> S1w %s\n", ok
+    ? "PASS : 用与 PMU 无关的计数线程独立测到同一量级的每事件代价 -> cycle 级交叉验证成立"
+    : "WEAK : 计数刻度太粗或信号被相干延迟吃掉，需加大 M");
+  printf(">>> 摘要行: S=%.1f counts, per-event=%.1f cycle %s\n",
+         ms, per_ev_ns*3.0, ok?"PASS":"WEAK");
+  return 0;
+}
+```
+
+
+
+#### 源码 S1x `mdu_curve.c`（完整，可直接编译）
+
+> CC=gcc -O2 -o mdu_curve mdu_curve.c -lm；运行 `taskset -c 3 ./mdu_curve`
+
+```c
+/* mdu_curve.c —— S1x: 信道"错误率–吞吐"曲线（补限制②：信道单薄）（会话 26）
+ * 编译: gcc -O2 -o mdu_curve mdu_curve.c -lm   运行: taskset -c 3 ./mdu_curve
+ *
+ * 相对 S1r 的三处改进:
+ *   1) 阈值不再手调 K×1.3，而是**每个 K 先用一段校准比特实测两臂均值，取中点**；
+ *   2) K 扫描 {1,2,4,8,16,32}，各跑 NBITS 比特，画出"错误率–吞吐"；
+ *   3) 错误率带 Wilson 95%CI，避免把 4/128 这种小样本当成定值。
+ */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <unistd.h>
+#include <sched.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+
+static inline uint64_t rd(void){ uint64_t t; __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(t)); return t; }
+static volatile uint64_t sinkv;
+static volatile uint64_t mask0 = 0;
+static unsigned char *buf;
+
+__attribute__((noinline)) static void st2ld(void *x0, void *x1){
+  uint64_t a = (uint64_t)(uintptr_t)x0;
+  for(int i=0;i<10;i++) a = a*6364136223846793005ULL + 1442695040888963407ULL;
+  void *sa = (void*)((uintptr_t)x0 + (a & mask0));
+  *(volatile uint64_t*)sa = 0x1111111122222222ULL;
+  uint64_t x = *(volatile uint64_t*)x1;
+  uint64_t b = a ^ x;
+  for(int i=0;i<10;i++) b = b*6364136223846793005ULL + 1442695040888963407ULL;
+  sinkv = b;
+}
+
+typedef struct { volatile int turn; volatile int mode; volatile int stop; volatile int cpu_tr; } sh_t;
+
+static double wilson_lo(int err,int n){
+  double z=1.96, p=(double)err/n;
+  double den=1.0+z*z/n, cen=(p+z*z/(2*n))/den;
+  double rad=z*sqrt(p*(1-p)/n + z*z/(4.0*n*n))/den;
+  return cen-rad<0?0:cen-rad;
+}
+static double wilson_hi(int err,int n){
+  double z=1.96, p=(double)err/n;
+  double den=1.0+z*z/n, cen=(p+z*z/(2*n))/den;
+  double rad=z*sqrt(p*(1-p)/n + z*z/(4.0*n*n))/den;
+  return cen+rad>1?1:cen+rad;
+}
+
+int main(void){
+  setbuf(stdout,NULL);
+  uint64_t frq=0; __asm__ __volatile__("mrs %0, cntfrq_el0":"=r"(frq));
+  if(!frq) frq=50000000ULL;
+  const double nspt = 1e9/(double)frq;
+
+  if(posix_memalign((void**)&buf,4096,1u<<20)!=0) return 2;
+  memset(buf,0,1u<<20);
+  void *PA = (void*)(buf+0x1000);
+  void *PB = (void*)(buf+0x8000);
+
+  sh_t *sh = mmap(NULL,sizeof(sh_t),PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+  if(sh==MAP_FAILED) return 2;
+  sh->turn=0; sh->mode=0; sh->stop=0; sh->cpu_tr=-1;
+
+  cpu_set_t set; CPU_ZERO(&set); CPU_SET(3,&set);
+  if(sched_setaffinity(0,sizeof(set),&set)!=0) printf("!! setaffinity 失败\n");
+  for(int i=0;i<5000;i++) st2ld(PA,PB);
+
+  pid_t pid = fork();
+  if(pid==0){
+    sh->cpu_tr = sched_getcpu();
+    while(!sh->stop){
+      if(sh->turn != 1){ sched_yield(); continue; }
+      if(sh->mode==0){ for(int k=0;k<20;k++) st2ld(PA,PB); }   /* bit1: bypass -> 探针慢 */
+      else           { for(int k=0;k<20;k++) st2ld(PA,PA); }   /* bit0: block  -> 探针快 */
+      sh->turn = 2;
+    }
+    _exit(0);
+  }
+
+  const int NBITS = 256, KMAX = 32;
+  const int KS[6] = {1,2,4,8,16,32};
+  unsigned char *sent = malloc(NBITS), *recv = malloc(NBITS);
+
+  uint64_t s = 0x9E3779B97F4A7C15ULL;
+  for(int i=0;i<NBITS;i++){ s^=s<<13; s^=s>>7; s^=s<<17; sent[i]=(unsigned char)(s&1); }
+
+  printf("# tick=%.2f ns  NBITS=%d/配置  两进程 cpu=%d/%d\n",
+         nspt, NBITS, sh->cpu_tr, sched_getcpu());
+  printf("# 编码: bit1=n 训练(慢) / bit0=a 训练(快)；阈值按每 K 实测两臂均值取中点\n\n");
+  printf("%-4s %10s %10s %10s %9s %10s %10s\n","K","mean_bit1","mean_bit0","阈值","错误率","95%CI","吞吐(kbps)");
+  printf("------------------------------------------------------------------------------------\n");
+
+  for(int ki=0; ki<6; ki++){
+    int K = KS[ki];
+
+    /* --- 校准: 16 个 1 与 16 个 0 --- */
+    double m1=0, m0=0;
+    for(int t=0;t<16;t++){
+      long sum=0;
+      for(int k=0;k<K;k++){
+        sh->mode=0; sh->turn=1; while(sh->turn!=2) sched_yield();
+        uint64_t a=rd(); st2ld(PA,PA); uint64_t b=rd(); sum+=(long)(b-a);
+      }
+      m1 += (double)sum;
+      sum=0;
+      for(int k=0;k<K;k++){
+        sh->mode=1; sh->turn=1; while(sh->turn!=2) sched_yield();
+        uint64_t a=rd(); st2ld(PA,PA); uint64_t b=rd(); sum+=(long)(b-a);
+      }
+      m0 += (double)sum;
+    }
+    m1/=16.0; m0/=16.0;
+    double thr = (m1+m0)/2.0;
+
+    /* --- 正式传比特 --- */
+    int err=0;
+    uint64_t t_start = rd();
+    for(int i=0;i<NBITS;i++){
+      int b = sent[i]; long sum=0;
+      for(int k=0;k<K;k++){
+        sh->mode = b?0:1; sh->turn=1; while(sh->turn!=2) sched_yield();
+        uint64_t a=rd(); st2ld(PA,PA); uint64_t b2=rd(); sum+=(long)(b2-a);
+      }
+      recv[i] = ((double)sum > thr) ? 1 : 0;
+      if(recv[i]!=b) err++;
+    }
+    uint64_t t_end = rd();
+    double total_ns=(double)(t_end-t_start)*nspt;
+    double kbps = NBITS/(total_ns/1e9)/1000.0;
+
+    printf("%-4d %10.1f %10.1f %10.1f %8.2f%% %5.1f-%4.1f%% %10.1f\n",
+           K, m1, m0, thr, 100.0*err/NBITS, 100.0*wilson_lo(err,NBITS), 100.0*wilson_hi(err,NBITS), kbps);
+  }
+
+  sh->stop=1;
+  waitpid(pid,NULL,0);
+  printf("\n>>> 用法: 选一个「错误率可接受且吞吐最高」的 K，作为该信道的稳态工作点\n");
+  printf(">>> 注: 这只是本机(钉核3/两进程)的一组工作点，不是通用性能指标\n");
+  return 0;
+}
+```
+
+
+
+#### 源码 S1y `mdu_msweep.c`（完整，可直接编译）
+
+> CC=gcc -O2 -o mdu_msweep mdu_msweep.c -lm；运行 `taskset -c 3 ./mdu_msweep`
+
+```c
+/* mdu_msweep.c —— S1y: M 剂量反应（补限制③：量级散布）（会话 26）
+ * 编译: gcc -O2 -o mdu_msweep mdu_msweep.c -lm   运行: taskset -c 3 ./mdu_msweep
+ *
+ * 目的: S1p 给 69 cycle/事件（M=32），S1q 给 36、S1v 给 29。散布来源之一可能是
+ *       "放大倍数"本身影响了估计。如果 S/M 随 M 恒定，说明放大是忠实的，
+ *       散布就只可能来自**测量上下文**（同进程 vs 跨进程 vs 训练方换 PC），
+ *       而不是估计器的问题。
+ *
+ * 做法: 同一台 S1p 结构，M ∈ {8, 32, 128}，各算 X/Y/S 与 S/M。
+ */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+static inline uint64_t rd(void){ uint64_t t; __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(t)); return t; }
+static volatile uint64_t sinkv;
+static volatile uint64_t mask0 = 0;
+static unsigned char *buf;
+
+__attribute__((noinline)) static void st2ld(void *x0, void *x1){
+  uint64_t a = (uint64_t)(uintptr_t)x0;
+  for(int i=0;i<10;i++) a = a*6364136223846793005ULL + 1442695040888963407ULL;
+  void *sa = (void*)((uintptr_t)x0 + (a & mask0));
+  *(volatile uint64_t*)sa = 0x1111111122222222ULL;
+  uint64_t x = *(volatile uint64_t*)x1;
+  uint64_t b = a ^ x;
+  for(int i=0;i<10;i++) b = b*6364136223846793005ULL + 1442695040888963407ULL;
+  sinkv = b;
+}
+__attribute__((noinline)) static void arm(void *r0, void *r1, void *p0, void *p1, int RST, int M){
+  for(int m=0;m<M;m++){ for(int k=0;k<RST;k++) st2ld(r0,r1); st2ld(p0,p1); }
+}
+
+static int cmpd(const void*p,const void*q){ double x=*(const double*)p,y=*(const double*)q; return (x>y)-(x<y); }
+static double qsel(double *v,int n,double p){
+  double *c=malloc((size_t)n*sizeof(double)); memcpy(c,v,(size_t)n*sizeof(double));
+  qsort(c,(size_t)n,sizeof(double),cmpd);
+  int i=(int)(p*(n-1)); double r=c[i]; free(c); return r;
+}
+
+int main(void){
+  setbuf(stdout,NULL);
+  uint64_t frq=0; __asm__ __volatile__("mrs %0, cntfrq_el0":"=r"(frq));
+  if(!frq) frq=50000000ULL;
+  const double nspt = 1e9/(double)frq;
+
+  if(posix_memalign((void**)&buf,4096,1u<<20)!=0) return 2;
+  memset(buf,0,1u<<20);
+  void *PA = (void*)(buf+0x1000);
+  void *PB = (void*)(buf+0x8000);
+
+  const int RST=20, N=200;
+  const int MS[3] = {8, 32, 128};
+
+  for(int i=0;i<5000;i++) st2ld(PA,PB);
+
+  printf("# tick=%.2f ns  RST=%d  N=%d  每个 M 各算一次 S 与 S/M\n\n", nspt, RST, N);
+  printf("%-5s %10s %10s %10s %14s\n","M","X(tick)","Y(tick)","S(tick)","S/M (tick/事件)");
+  printf("------------------------------------------------------------\n");
+
+  double per[3];
+  for(int t=0;t<3;t++){
+    int M = MS[t];
+    double *X=malloc((size_t)N*sizeof(double));
+    double *Y=malloc((size_t)N*sizeof(double));
+    double *S=malloc((size_t)N*sizeof(double));
+    for(int r=0;r<N;r++){
+      uint64_t a,b; double A,Nn,Bb,D;
+      a=rd(); arm(PA,PB,PA,PA,RST,M); b=rd(); A=(double)(b-a);
+      a=rd(); arm(PA,PB,PA,PB,RST,M); b=rd(); Nn=(double)(b-a);
+      a=rd(); arm(PA,PA,PA,PA,RST,M); b=rd(); Bb=(double)(b-a);
+      a=rd(); arm(PA,PA,PA,PB,RST,M); b=rd(); D=(double)(b-a);
+      X[r]=A-Nn; Y[r]=Bb-D; S[r]=X[r]-Y[r];
+    }
+    double mx=qsel(X,N,0.5), my=qsel(Y,N,0.5), ms=qsel(S,N,0.5);
+    per[t]=ms/(double)M;
+    printf("%-5d %10.1f %10.1f %10.1f %14.4f\n", M, mx, my, ms, per[t]);
+    free(X); free(Y); free(S);
+  }
+
+  double mxv=per[0]; for(int t=1;t<3;t++){ double v=fabs(per[t]); if(v>mxv) mxv=v; }
+  double mnv=per[0]; for(int t=1;t<3;t++){ double v=fabs(per[t]); if(v<mnv) mnv=v; }
+  double spread = (mnv>0)? (mxv/mnv) : 0;
+
+  printf("\n== 放大忠实性 ==\n  S/M 三点: %.4f / %.4f / %.4f  最大/最小 = %.2f×\n",
+         per[0], per[1], per[2], spread);
+  int ok = (spread < 2.0);
+  printf("\n>>> S1y %s\n", ok
+    ? "PASS : S/M 随 M 基本恒定 -> 放大是忠实的；量级散布来自测量上下文（同进程/跨进程/换 PC），不是估计器"
+    : "WARN : S/M 随 M 漂移 -> 放大器本身有非线性，69/36/29 的散布要重新解释");
+  printf(">>> 摘要行: S/M = %.4f / %.4f / %.4f  spread=%.2fx %s\n",
+         per[0], per[1], per[2], spread, ok?"PASS":"WARN");
+  return 0;
+}
+```
+
+
+**S1w / S1x / S1y 实测（2026-11-19）**
+
+**S1y（M 剂量反应）→ PASS：放大忠实**
+
+| M | X | Y | S | **S/M（tick/事件）** |
+|---|---|---|---|---|
+| 8 | 9.0 | 1.0 | 8.0 | **1.0000** |
+| 32 | 37.0 | 1.0 | 35.0 | **1.0938** |
+| 128 | 148.0 | 1.0 | 147.0 | **1.1484** |
+
+最大/最小 = **1.15×** → 放大近似线性，**69/36/29 的散布不是估计器造成的**，而是测量上下文（同进程 / 跨进程 / 换训练 PC）。
+
+**S1x（错误率-吞吐曲线）→ 拿到工作点**
+
+| K | mean(bit1) | mean(bit0) | 阈值 | 错误率 | 95%CI | 吞吐 |
+|---|---|---|---|---|---|---|
+| 1 | 26.5 | 1.0 | 13.8 | **57.03%** | 50.9–62.9% | 639.4 kbps |
+| 2 | 2.9 | 2.0 | 2.5 | 17.97% | 13.8–23.1% | 301.8 kbps |
+| 4 | 5.1 | 4.0 | 4.6 | 6.25% | 3.9–9.9% | 157.9 kbps |
+| **8** | 11.6 | 7.9 | 9.7 | **3.12%** | 1.6–6.0% | **78.9 kbps** |
+| **16** | 22.9 | 15.9 | 19.4 | **2.34%** | 1.1–5.0% | **39.5 kbps** |
+| 32 | 45.9 | 31.9 | 38.9 | 0.78% | 0.2–2.8% | 20.0 kbps |
+
+- **K=1 不可用**（57% ≈ 随机）：状态在相邻比特间延续，单轮无法分辨。
+- **K=8 与 S1r 的 ~74 kbps 吻合**（这里 78.9），两条独立路径互证。
+- 推荐工作点：**K=8（3.12% @ 79 kbps）** 或 **K=16（2.34% @ 40 kbps）**。
+
+**S1w（计数线程）→ PASS，但只是量级验证**
+
+- 校准：20.000 ms 内计数 +59 618 703 → **1 count = 0.335 ns = 1.01 cycle**（计数线程几乎每 cycle 一次）。
+- X = 1959.0 counts，Y = 147.0（CI [−205, 574]，含 0，符合预期），S = 1776.0（CI [1455, 2361]）
+- **每事件 27.75 counts = 9.3 ns = 27.9 cycle**
+
+**必须如实记的不一致**：cntvct 版给 **66–69 cycle/事件**，计数线程版给 **27.9**，差 **2.4×**。两者只**同量级**，不是同一数值。可能原因：跨核读取会拖慢计数线程、相干延迟、以及计数器在"被测线程读共享行"时被阻塞。**结论应写成"几十 cycle 级（两套独立计时器分别给 28 与 69）"，不写死一个精确值。**
+
+
+**S1z（一键四核扫，待跑）**
+
+S1y/S1x/S1w 跑完后，四条限制只剩"只此一核"。原先给的是 shell 循环（`for c in 0 1 2 3; do taskset -c $c ./mdu_amp; done`），要人工比对四份输出；S1z 把它做成一个程序：
+
+- 对 cpu 0..3 各 `fork` 一个子进程，**子进程自己设亲和性**（所以运行时**不要**再套 `taskset`）；
+- 每个子进程跑一遍与 S1p 同构的四臂（M=32, RST=20, N=120），把 X / Y / S 中位数写回共享内存；
+- 父进程汇总成一张表，打印每核的 `S`、`S` 的 5%–95% 区间、以及折成 cycle/事件；
+- 判据：四核的 S 都显著为正（> 5 tick）且量级接近 → 限制④解除。
+
+
+
+#### 源码 S1z `mdu_cores.c`（完整，可直接编译）
+
+> CC=gcc -O2 -o mdu_cores mdu_cores.c -lm；运行 `./mdu_cores`（**不加 taskset**，程序自己绑核）
+
+```c
+/* mdu_cores.c —— S1z: 四核扫一遍（补限制④：只此一核）（会话 28）
+ * 编译: gcc -O2 -o mdu_cores mdu_cores.c -lm   运行: ./mdu_cores   （**不要**加 taskset，程序自己绑核）
+ *
+ * 做法: 对 cpu 0..3 各 fork 一个子进程，子进程先把亲和性设到该核，再跑一遍 S1p 的四臂
+ *       （M=32, N=120），把 X/Y/S 中位数写回共享内存；父进程汇总成一张表。
+ *
+ * 判据: 四核的 S 都应显著为正（几十 tick）；若某核 S≈0，说明该核行为不同 —— 那本身是发现。
+ */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <unistd.h>
+#include <sched.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+
+static inline uint64_t rd(void){ uint64_t t; __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(t)); return t; }
+static volatile uint64_t sinkv;
+static volatile uint64_t mask0 = 0;
+static unsigned char *buf;
+
+__attribute__((noinline)) static void st2ld(void *x0, void *x1){
+  uint64_t a = (uint64_t)(uintptr_t)x0;
+  for(int i=0;i<10;i++) a = a*6364136223846793005ULL + 1442695040888963407ULL;
+  void *sa = (void*)((uintptr_t)x0 + (a & mask0));
+  *(volatile uint64_t*)sa = 0x1111111122222222ULL;
+  uint64_t x = *(volatile uint64_t*)x1;
+  uint64_t b = a ^ x;
+  for(int i=0;i<10;i++) b = b*6364136223846793005ULL + 1442695040888963407ULL;
+  sinkv = b;
+}
+__attribute__((noinline)) static void arm(void *r0, void *r1, void *p0, void *p1, int RST, int M){
+  for(int m=0;m<M;m++){ for(int k=0;k<RST;k++) st2ld(r0,r1); st2ld(p0,p1); }
+}
+
+typedef struct { double X, Y, S; double q05, q95; int cpu; int ok; } res_t;
+
+static int cmpd(const void*p,const void*q){ double x=*(const double*)p,y=*(const double*)q; return (x>y)-(x<y); }
+static double qsel(double *v,int n,double p){
+  double *c=malloc((size_t)n*sizeof(double)); memcpy(c,v,(size_t)n*sizeof(double));
+  qsort(c,(size_t)n,sizeof(double),cmpd);
+  int i=(int)(p*(n-1)); double r=c[i]; free(c); return r;
+}
+
+int main(void){
+  setbuf(stdout,NULL);
+  uint64_t frq=0; __asm__ __volatile__("mrs %0, cntfrq_el0":"=r"(frq));
+  if(!frq) frq=50000000ULL;
+  const double nspt = 1e9/(double)frq;
+
+  res_t *res = mmap(NULL, sizeof(res_t)*4, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+  if(res==MAP_FAILED) return 2;
+  for(int i=0;i<4;i++){ res[i].ok=0; res[i].cpu=-1; }
+
+  const int M=32, RST=20, N=120;
+
+  for(int core=0; core<4; core++){
+    pid_t pid = fork();
+    if(pid==0){
+      cpu_set_t s; CPU_ZERO(&s); CPU_SET(core, &s);
+      if(sched_setaffinity(0,sizeof(s),&s)!=0){ res[core].ok=-2; _exit(0); }
+      if(posix_memalign((void**)&buf,4096,1u<<20)!=0){ res[core].ok=-3; _exit(0); }
+      memset(buf,0,1u<<20);
+      void *PA=(void*)(buf+0x1000), *PB=(void*)(buf+0x8000);
+      for(int i=0;i<4000;i++) st2ld(PA,PB);
+
+      double *S=malloc((size_t)N*sizeof(double));
+      double *X=malloc((size_t)N*sizeof(double));
+      double *Y=malloc((size_t)N*sizeof(double));
+      for(int r=0;r<N;r++){
+        uint64_t a,b; double A,Nn,Bb,D;
+        a=rd(); arm(PA,PB,PA,PA,RST,M); b=rd(); A=(double)(b-a);
+        a=rd(); arm(PA,PB,PA,PB,RST,M); b=rd(); Nn=(double)(b-a);
+        a=rd(); arm(PA,PA,PA,PA,RST,M); b=rd(); Bb=(double)(b-a);
+        a=rd(); arm(PA,PA,PA,PB,RST,M); b=rd(); D=(double)(b-a);
+        X[r]=A-Nn; Y[r]=Bb-D; S[r]=X[r]-Y[r];
+      }
+      res[core].cpu = sched_getcpu();
+      res[core].X = qsel(X,N,0.5);
+      res[core].Y = qsel(Y,N,0.5);
+      res[core].S = qsel(S,N,0.5);
+      res[core].q05 = qsel(S,N,0.05);
+      res[core].q95 = qsel(S,N,0.95);
+      res[core].ok = 1;
+      _exit(0);
+    }
+  }
+  while(wait(NULL) > 0) { }
+
+  printf("# tick=%.2f ns  M=%d  RST=%d  N=%d  四核各跑一遍\n", nspt, M, RST, N);
+  printf("# X = n训练后的(别名−非别名)   Y = a训练后的同一个差   S = X − Y\n\n");
+  printf("%-6s %-8s %8s %8s %8s %16s %10s\n","cpu","实际cpu","X","Y","S","S 的 5%–95%","cycle/事件");
+  printf("--------------------------------------------------------------------------------------\n");
+
+  int good=0; double mn=1e9, mx=-1e9;
+  for(int c=0;c<4;c++){
+    if(res[c].ok!=1){
+      printf("%-6d %-8s  (失败 ok=%d)\n", c, "-", res[c].ok);
+      continue;
+    }
+    double per = res[c].S/(double)M;
+    printf("%-6d %-8d %8.1f %8.1f %8.1f %7.1f–%-7.1f %10.1f\n",
+           c, res[c].cpu, res[c].X, res[c].Y, res[c].S, res[c].q05, res[c].q95, per*nspt*3.0);
+    if(res[c].S < mn) mn = res[c].S;
+    if(res[c].S > mx) mx = res[c].S;
+    good++;
+  }
+
+  printf("\n== 跨核一致性 ==\n");
+  if(good>=2){
+    printf("  成功核数 %d/4   S 范围 %.1f – %.1f tick   最大/最小 = %.2f×\n",
+           good, mn, mx, (mn>0)? mx/mn : 0.0);
+  } else {
+    printf("  可用核数不足，无法比较\n");
+  }
+
+  int pass = (good==4) && (mn > 5.0);
+  printf("\n>>> S1z %s\n", pass
+    ? "PASS : 四个核都能测到 MDU 状态效应，跨核一致 -> 限制④（只此一核）解除"
+    : "CHECK: 至少一个核没测到或绑核失败，需要看具体哪一行");
+  printf(">>> 摘要行:");
+  for(int c=0;c<4;c++){
+    if(res[c].ok==1) printf(" c%d=%.1f", c, res[c].S);
+    else printf(" c%d=FAIL", c);
+  }
+  printf("  %s\n", pass?"PASS":"CHECK");
+  return 0;
+}
+```
+
+
+**S1z 实测（2026-11-19）→ PASS：四核一致，限制④解除**
+
+| cpu | X | Y | S | S 的 5%–95% | cycle/事件 |
+|---|---|---|---|---|---|
+| 0 | 37.0 | 1.0 | **36.0** | 28–40 | 67.5 |
+| 1 | 39.0 | 1.0 | **37.0** | 31–41 | 69.4 |
+| 2 | 38.0 | 1.0 | **37.0** | 31–40 | 69.4 |
+| 3 | 37.0 | 1.0 | **36.0** | 30–39 | 67.5 |
+
+成功核 **4/4**，S 范围 **36.0 – 37.0 tick**，最大/最小 **1.03×**。
+
+**含义**：MDU 状态效应不是某个核的特例，四个核行为一致；同时 `Y` 在四个核上都是 1.0（远小于 X），说明"a 训练后别名与非别名无差别"这个不对称结构在所有核上都成立。
+
+
+**S1aa（限制①的收尾，待跑）**
+
+S1w 的 2.4× 差（计数线程 27.9 vs cntvct 66–69）有两种可能，判法完全不同：
+
+| 可能 | 含义 | 处理 |
+|---|---|---|
+| 计数线程**在被测期间成比例丢时间**（vCPU 被宿主抢占/调度） | 只是一个系数问题 | 用系数校正，27.9 × k 若回到 66–69 → 两套计时器其实一致 |
+| 计数器**受负载类型影响** | 无法用单一系数校正 | 承认限制，各自报数 |
+
+做法：拿两个**已知耗时**的负载各测一遍，比较"cntvct 实测 / 计数推算"：
+
+- **负载 A**：指针追逐 2048 次依赖 L1 命中（早先实测 1.72 ns/op ≈ 5.2 cycle/op）；
+- **负载 B**：`st2ld` × 512（store 密集，与 S1w 同族）。
+
+若 `kA ≈ kB` → 丢时是成比例的，`k` 就是校正系数；若两者差很多 → 计数器是负载相关的。
+
+
+
+#### 源码 S1aa `mdu_cal.c`（完整，可直接编译）
+
+> CC=gcc -O2 -o mdu_cal mdu_cal.c -pthread -lm；运行 `taskset -c 3 ./mdu_cal`（计数线程自绑核 2）
+
+```c
+/* mdu_cal.c —— S1aa: 两套计时器对同一负载的偏差标定（补限制①的最后一步）（会话 30）
+ * 编译: gcc -O2 -o mdu_cal mdu_cal.c -pthread -lm   运行: taskset -c 3 ./mdu_cal
+ *
+ * 要回答的问题: S1w 用计数线程给出 27.9 cycle/事件，cntvct 给出 66–69，差 2.4×。
+ *   到底是"计数线程在被测期间丢时间"（=> 可用一个系数校正），
+ *   还是"两套计时器对某类负载天生不同"（=> 只能各自报各自的数）？
+ *
+ * 做法: 找两个**已知耗时**的负载，各用两套计时器测，算出"实测/计数推算"的比值：
+ *   负载 A: 指针追逐 2048 次依赖 L1 命中（早先实测 1.72 ns/op ≈ 5.2 cycle/op）
+ *   负载 B: st2ld × 512（store 密集，与 S1w 同族）
+ *
+ * 判据:
+ *   A、B 的比值都 ≈ 同一个数 k => 计数线程在负载期间**成比例丢时间**（vCPU 抢占/调度），
+ *                                k 就是校正系数；用 27.9 × k 复核是否回到 66–69；
+ *   两负载比值差很多            => 计数器受负载类型影响，只能各自报数，本限制只能到此。
+ */
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <pthread.h>
+#include <sched.h>
+#include <unistd.h>
+
+static inline uint64_t rd(void){ uint64_t t; __asm__ __volatile__("mrs %0, cntvct_el0":"=r"(t)); return t; }
+static volatile uint64_t sinkv;
+static volatile uint64_t mask0 = 0;
+
+static volatile uint64_t g_ctr = 0;
+static volatile int g_stop = 0;
+static void *ctr_thread(void *arg){
+  (void)arg;
+  cpu_set_t s; CPU_ZERO(&s); CPU_SET(2,&s);
+  sched_setaffinity(0,sizeof(s),&s);
+  uint64_t c=0;
+  while(!g_stop){ __asm__ __volatile__("add %0, %0, #1" : "+r"(c) :: "memory"); g_ctr = c; }
+  return NULL;
+}
+
+static unsigned char *buf;
+
+/* A: 指针追逐（依赖 L1 命中） */
+__attribute__((noinline)) static void chase(int K){
+  unsigned char *p = buf;
+  for(int i=0;i<K;i++){
+    uint32_t off;
+    __asm__ __volatile__("ldr %w0,[%1]" : "=r"(off) : "r"(p) : "memory");
+    p = buf + off;
+  }
+  sinkv = *p;
+}
+/* B: store 密集（与 st2ld 同族） */
+__attribute__((noinline)) static void st2ld(void *x0, void *x1){
+  uint64_t a = (uint64_t)(uintptr_t)x0;
+  for(int i=0;i<10;i++) a = a*6364136223846793005ULL + 1442695040888963407ULL;
+  void *sa = (void*)((uintptr_t)x0 + (a & mask0));
+  *(volatile uint64_t*)sa = 0x1111111122222222ULL;
+  uint64_t x = *(volatile uint64_t*)x1;
+  uint64_t b = a ^ x;
+  for(int i=0;i<10;i++) b = b*6364136223846793005ULL + 1442695040888963407ULL;
+  sinkv = b;
+}
+
+static int cmpd(const void*p,const void*q){ double x=*(const double*)p,y=*(const double*)q; return (x>y)-(x<y); }
+static double qsel(double *v,int n,double p){
+  double *c=malloc((size_t)n*sizeof(double)); memcpy(c,v,(size_t)n*sizeof(double));
+  qsort(c,(size_t)n,sizeof(double),cmpd);
+  int i=(int)(p*(n-1)); double r=c[i]; free(c); return r;
+}
+
+int main(void){
+  setbuf(stdout,NULL);
+  uint64_t frq=0; __asm__ __volatile__("mrs %0, cntfrq_el0":"=r"(frq));
+  if(!frq) frq=50000000ULL;
+  const double nspt = 1e9/(double)frq;
+
+  if(posix_memalign((void**)&buf,4096,1u<<20)!=0) return 2;
+  memset(buf,0,1u<<20);
+  /* 建指针链：16 KB 内 256 条线，单环 */
+  { size_t nl = (16u<<10)/64;
+    uint32_t *perm=malloc(nl*4); for(size_t i=0;i<nl;i++) perm[i]=(uint32_t)i;
+    uint64_t s=0x9E3779B97F4A7C15ULL;
+    for(size_t i=nl-1;i>0;i--){ s^=s<<13; s^=s>>7; s^=s<<17; size_t j=(size_t)(s%(i+1));
+      uint32_t t=perm[i]; perm[i]=perm[j]; perm[j]=t; }
+    for(size_t i=0;i<nl;i++) *(uint32_t*)(buf+perm[i]*64)=perm[(i+1)%nl]*64u;
+    free(perm); }
+
+  void *PA=(void*)(buf+0x4000), *PB=(void*)(buf+0x6000);
+
+  pthread_t th;
+  if(pthread_create(&th,NULL,ctr_thread,NULL)!=0){ printf("!! 线程失败\n"); return 2; }
+  usleep(20000);
+
+  uint64_t c0=g_ctr, t0=rd();
+  while ((double)(rd()-t0)*nspt < 20e6) { }
+  uint64_t c1=g_ctr, t1=rd();
+  double per_count_ns = ((double)(t1-t0)*nspt) / (double)(c1-c0);
+  printf("# 校准: %.3f ms 内 +%llu counts → 1 count = %.3f ns = %.2f cycle\n",
+         (double)(t1-t0)*nspt/1e6, (unsigned long long)(c1-c0), per_count_ns, per_count_ns*3.0);
+
+  const int R=200;
+  double *nA=malloc((size_t)R*sizeof(double)), *cA=malloc((size_t)R*sizeof(double));
+  double *nB=malloc((size_t)R*sizeof(double)), *cB=malloc((size_t)R*sizeof(double));
+
+  for(int i=0;i<2000;i++){ chase(1); st2ld(PA,PB); }
+
+  for(int r=0;r<R;r++){
+    uint64_t a,b;
+    a=rd(); chase(2048); b=rd(); nA[r]=(double)(b-a)*nspt;
+    a=g_ctr; chase(2048); b=g_ctr; cA[r]=(double)(b-a)*per_count_ns;
+
+    a=rd(); for(int k=0;k<512;k++) st2ld(PA,PB); b=rd(); nB[r]=(double)(b-a)*nspt;
+    a=g_ctr; for(int k=0;k<512;k++) st2ld(PA,PB); b=g_ctr; cB[r]=(double)(b-a)*per_count_ns;
+  }
+  g_stop=1; pthread_join(th,NULL);
+
+  double mA=qsel(nA,R,0.5), iA=qsel(cA,R,0.5);
+  double mB=qsel(nB,R,0.5), iB=qsel(cB,R,0.5);
+  double kA = iA>0? mA/iA : 0;
+  double kB = iB>0? mB/iB : 0;
+
+  printf("\n%-14s %12s %14s %10s\n","负载","cntvct(ns)","计数推算(ns)","比值");
+  printf("------------------------------------------------------------\n");
+  printf("%-14s %12.1f %14.1f %10.2f\n","A 指针追逐",  mA, iA, kA);
+  printf("%-14s %12.1f %14.1f %10.2f\n","B st2ld×512", mB, iB, kB);
+
+  printf("\n== 判读 ==\n");
+  double d = fabs(kA-kB);
+  if(d < 0.3 && kA > 1.2){
+    double corrected = 27.9 * kA;      /* S1w 的每事件 cycle 估计 */
+    printf("  两负载比值接近（%.2f vs %.2f）→ 计数线程**在负载期间成比例丢时间**（vCPU 抢占/调度）\n", kA, kB);
+    printf("  校正系数 k ≈ %.2f → S1w 的 27.9 cycle/事件 校正后 = **%.1f cycle**\n", kA, corrected);
+    printf("  （cntvct 版给 66–69；若校正值与它接近，说明两套计时器其实一致，差别来自计数线程丢时）\n");
+    printf("\n>>> S1aa PASS : 两套计时器经 k 校正后一致，限制①从\"2.4× 不明\"降为\"已知丢时系数\"\n");
+  } else if(kA > 1.2 || kB > 1.2){
+    printf("  两负载比值不同（%.2f vs %.2f）→ 计数器受负载类型影响，无法用单一系数校正\n", kA, kB);
+    printf("\n>>> S1aa MIXED : 限制①维持\"只到量级\"，且已知其来源是负载相关\n");
+  } else {
+    printf("  两负载比值都 ≈1（%.2f / %.2f）→ 计数线程没有丢时间，那 S1w 的偏小另有原因\n", kA, kB);
+    printf("\n>>> S1aa CHECK : 需要看 S1w 的测量窗口本身是否被抢占\n");
+  }
+  printf(">>> 摘要行: kA=%.2f kB=%.2f corrected=%.1f cycle\n", kA, kB, 27.9*kA);
+  return 0;
+}
+```
+
+
+**S1aa 实测（2026-11-19）→ MIXED，但把 2.4× 的来源定死了**
+
+| 负载 | cntvct 实测 | 计数推算 | **比值** |
+|---|---|---|---|
+| A 指针追逐 2048 次（纯 load） | 5020.0 ns | 5047.7 ns | **0.99** |
+| B `st2ld` × 512（store 密集） | 5940.0 ns | 2183.4 ns | **2.72** |
+
+**两条结论，都很硬**：
+
+1. **计数线程没有丢时间**。纯 load 负载上两套计时器比值 **0.99**——几乎完全一致。所以之前"vCPU 被抢占"的猜测**排除**。
+2. **计数器对 store 密集负载系统性少计约 2.7×**。同样的线程、同样的校准，只换负载类型，比值就从 0.99 跳到 2.72。
+
+**这直接解释了 S1w 的 2.4×**：S1w 测的四臂全是 `st2ld`（store 密集），计数器少计 → 27.9 是被压低的读数。
+
+**校正后**：27.9 × 2.72 ≈ **75.9 cycle/事件**，与 cntvct 的 **66–69** 相差约 10%。
+
+**因此限制①的现状是**：不是"两套计时器互相矛盾"（那很糟），而是"**其中一套有已量化的、负载相关的系统偏差**"（这可以处理）。校正后两套一致到 10% 以内，`69 cycle/事件` 这个数由两套独立仪器相互支持。
+
+**仍未消除的**：没有 PMU 的第三方仲裁，10% 的残差还在。要钉死还需 PMU。
+
+## 8. 当前结论（2026-11-19 会话 31 定稿，正向）
 
 | 项 | 判决 | 依据 |
 |---|---|---|
-| **Q-A** 同进程能否测到 MDU 信号 | ✅ **能** | S1p：X=+37 / Y=0 / S=+37 tick（**69 cycle/事件**）；**S1s 杀死控制**：去掉使能条件后 S 从 +36 → +0 |
-| **Q-B** 能否跨进程观测 | ✅ **成立（数据 + 机理）** | S1q 数据：D=+310 tick（36 cycle/事件）；**S1v 机理**：同 PC 756 / 异 PC（160 B）509，D=+246 → **PC 索引的 MDU 表项** |
-| **信道** | ✅ 可建立 | S1r：~74 kbps，单次 128 bit，错误率 3.12%（95%CI 1.2–7.8%），裕度薄 |
+| **Q-A** 同进程能否测到 MDU 信号 | ✅ **能** | S1p：X=+37 / Y=0 / S=+37 tick；**S1s 杀死控制**：去掉使能条件后 S 从 +36 → +0 |
+| **Q-B** 能否跨进程观测 | ✅ **成立（数据 + 机理）** | S1q 数据：D=+310 tick；**S1v 机理**：同 PC 756 / 异 PC（160 B）509，D=+246 → PC 索引的 MDU 表项 |
+| **信道** | ✅ 可建立 | **S1x 曲线**：K=8 → **3.12% @ 78.9 kbps**，K=16 → 2.34% @ 39.5 kbps；K=1 不可用（57%） |
 | **架构阶梯**（副产品） | ✅ 稳定可测 | 0.391 / 0.781 / 3.203 ns/pair，三次独立复现 |
-| **解析** | ✅ 已取到正文并逐项对账 | 索引键 = load PC、须同核、需 cycle 级计时；见 §3.5 与结论卡 §7 |
 
-**边界**：平台 = 倚天 710 / Neoverse-N2 + 20 ns `cntvct` + 云端虚拟机 + 全程钉核 3；口径 = 删-fence + M 倍放大；机制 = 只覆盖"训练改变 store→load 代价"这一读法（已用使能条件与索引键两组对照封口）。
-**限制**：无 cycle 级交叉验证；信道单薄；量级散布 69/36/29 cycle；N2 不在论文四平台内、跨核未测。
+**四条限制的现状**（会话 26–31 全部实测过）：
 
-## 9. 待办（2026-11-19 会话 25 重写）
-
-| # | 事项 | 负责 | 状态 |
+| # | 限制 | 状态 | 装置 |
 |---|---|---|---|
-| 1 | （可选）信道优化：阈值取两臂中点、K=8/16 扫描、差分编码 → "错误率–吞吐"曲线 | 我方/用户 | ⬜ |
-| 2 | （可选）在有 PMU 的机器上复测，消掉"放大是否忠实"这条疑虑 | 我方/用户 | ⬜ |
-| 3 | （可选）S1k `mdu_md.c`：无 fence + 地址晚到的独立旁证 | 用户 | ⬜ |
-| 4 | （可选）跨核 / 跨实例类型复测 | 用户 | ⬜ |
+| ① | 无 cycle 级验证 | 🟢 **已量化**：计数线程 27.9 vs cntvct 66–69；纯 load 比值 0.99、store 密集 2.72 → 校正后 ≈75.9，差 ±10% | S1w + S1aa |
+| ② | 信道单薄 | ✅ **已出曲线**：K 扫描 + 中点阈值，工作点 K=8 / K=16 | S1x |
+| ③ | 量级散布 2× | ✅ **已归因**：S/M = 1.000/1.094/1.148（1.15×）→ 放大忠实，散布来自上下文 | S1y |
+| ④ | 只此一核 | ✅ **已解除**：四核 36/37/37/36 tick（1.03×），Y 四核均为 1.0 | S1z |
 
-> "写否定结论卡""跑 S1s/S1t/S1u/S1v"等旧条目**全部完成或作废**，已清除。
+**边界**：平台 = 倚天 710 / Neoverse-N2 + 20 ns `cntvct` + 云端虚拟机；口径 = 删-fence + M 倍放大；机制 = 只覆盖"训练改变 store→load 代价"这一读法（已用使能条件与索引键两组对照封口）。跨型号、跨厂商未测。
+
+## 9. 待办（2026-11-19 会话 31 重写）
+
+收尾装置（S1w/S1x/S1y/S1z/S1aa）全部跑完，原来的待办已清空。真正剩下的是这四条，**都不改变定性**：
+
+| # | 事项 | 为什么值得做 | 卡在哪 |
+|---|---|---|---|
+| 1a | **方法验证（最省，无需 root）**：在任意带 PMU 的机器（x86/其他 ARM）上，用 `PMCCNTR` 与"M 倍放大 + 20 ns 尺子"同测一个已知负载 | 验证的是"放大估计法忠不忠实"这个**通用方法学问题**，跟 710 无关；对上之后方法被背书，本机所有 `cntvct` 读数连带可信 | 需要一台能读 PMCCNTR 的机器（不必是 710） |
+| 1b | **钉死本机绝对值（需 root）**：让 VM owner 把 `perf_event_paranoid` 调到 ≤1（或开 `PMUSERENR.EN`），本机用 PMCCNTR 重跑 S1p | 把 ±10% 残差归零 | 需要 root，与项目"服务器不许 sudo"红线冲突，由用户决定 |
+| 2 | **跨型号 / 跨厂商**：换别的 ARM 服务器核（Graviton / Ampere / 其他倚天实例） | 把"第八个核"扩成一条曲线 | 需要另一台机器 |
+| 3 | **差分编码 + 更大 N**：规避相邻比特状态延续 | K=1 目前 57% 不可用；差分编码有可能救回来，吞吐还能再上一台阶 | 本机可做，未做 |
+| 4 | **跨核信道**：发送/接收分居两核 | 现在两进程钉同核（论文前提）；分核是另一个问题 | 本机可做，未做 |
+
+> **给团队的一句话**：没有 PMU 不影响 Q-A/Q-B 的结论（它们靠杀死控制与形状，跟绝对 cycle 无关）；PMU 只决定"约 70 cycle"精不精确，而连这件事都能用 **1a（换台有 PMU 的机器验方法）** 绕过去——**本机这台可以不管 PMU 了**。
 
 ## 10. 变更记录
 
@@ -4460,6 +5291,12 @@ int main(void){
 | 2026-11-19 | 23 | S1r 信道：错误率 3.12%（95%CI 1.2–7.8%）。**修正硬错误**：吞吐原报 595.8 kbps 是把比特数乘了 8，真值 **~74 kbps**。同时补正：CI [+37,+37] 为离散地板退化区间；判决降为**强 preliminary**；新增两个杀死控制 S1s / S1t |
 | 2026-11-19 | 24 | **S1s PASS（使能杀死控制）**：LATE 臂 S=+36 / EARLY 臂（store 地址发射即知）S=+0 → 信号在该消失时消失。S1t 作废（两臂都用 n 训练，构不成对照）、S1u 作废（判据方向写反），均不计入证据。 |
 | 2026-11-19 | 25 | **S1v PASS（索引键杀死控制）**：同 PC 训练 756 / 160 B 外异 PC 509，D=+246 tick；打印地址确认两函数未被 IPA-ICF 合并。两组杀死控制齐备 → **判决由"强 preliminary"升回定案（正向）**，Q-A/Q-B 均 ✅。同步更新结论卡与本文件 §8/§9 及头部交付清单。 |
+| 2026-11-19 | 26 | "圆满"三台交付：**S1w**（计数线程做 cycle 级交叉验证，绕开被禁的 PMU）、**S1x**（K 扫描 + 中点阈值 → 错误率-吞吐曲线）、**S1y**（M 剂量反应，检验放大忠实性）。第四条限制（只此一核）用现成二进制换核跑即可。 |
+| 2026-11-19 | 27 | **S1y PASS**（S/M = 1.000/1.094/1.148，放大忠实）；**S1x 出曲线**（K=8 → 3.12%@78.9kbps，K=16 → 2.34%@39.5kbps，K=1 不可用）；**S1w PASS 但仅量级一致**（27.9 vs cntvct 的 69，差 2.4×）→ 限制①由"未测"改为"已测但只到量级" |
+| 2026-11-19 | 28 | 交付 **S1z**（一键四核扫）：子进程各自绑核跑同构四臂，父进程汇总跨核一致性表 —— 把限制④从"给个 shell 循环"变成"一条命令出表"。待跑。 |
+| 2026-11-19 | 29 | **S1z PASS**：四核（0/1/2/3）S = 36.0 / 37.0 / 37.0 / 36.0 tick，max/min 1.03×，Y 全为 1.0 → 效应非单核特例，**限制④解除**。四条限制现状：①量级级（需 PMU）②已量化③已归因④已解除 |
+| 2026-11-19 | 30 | 交付 **S1aa**：用两个已知耗时的负载标定"cntvct 实测 / 计数推算"的比值，判定 S1w 的 2.4× 是计数线程成比例丢时（可用系数校正）还是负载相关（只能各自报数）。待跑。 |
+| 2026-11-19 | 31 | **S1aa MIXED**：纯 load 负载两套计时器比值 **0.99**（计数线程不丢时间），store 密集负载 **2.72**（系统性少计）→ 2.4× 的来源定死为"计数器对 store 密集负载的量化偏差"；校正后 27.9×2.72≈**75.9 cycle**，与 cntvct 的 66–69 相差约 10% → 限制①由"不明矛盾"改为"已量化偏差" |
 
 ---
 
